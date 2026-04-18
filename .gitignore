@@ -1,0 +1,55 @@
+# Secret Protection - never commit credentials
+credentials.json
+**/credentials.json
+**/credential*
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+!.env.template
+**/secrets/
+**/.secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node
+node_modules/
+.npm
+
+# Logs
+*.log
+logs/
