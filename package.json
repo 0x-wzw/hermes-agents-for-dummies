@@ -1,0 +1,11 @@
+{
+  "name": "hermes-agents-for-dummies",
+  "version": "1.0.0",
+  "description": "Hermes agents tutorial",
+  "scripts": {
+    "lint": "echo \"No lint configured\"",
+    "test": "echo \"No tests configured\"",
+    "build": "echo \"No build step\""
+  },
+  "license": "MIT"
+}
