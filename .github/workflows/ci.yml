@@ -5,13 +5,12 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Repository check
-        run: |
-          echo 'No standard package manifest detected.'
-          echo 'Detected languages: check repo contents and update this workflow.'
-          ls -la
+  ci:
+    uses: 0x-wzw/ci-cd-templates/.github/workflows/node-standard.yml@main
+    with:
+      node-version: '20'
+      package-manager: 'npm'
+      has-docker: false
+    secrets:
+      inherit
 
