@@ -1,6 +1,6 @@
-# 07 - Advanced Topics
+# 07 — Advanced Topics
 
-Advanced configuration and operations for Hermes.
+Advanced configuration and operations for Hermes Agent v0.16.0.
 
 ---
 
@@ -9,133 +9,187 @@ Advanced configuration and operations for Hermes.
 ### Credential Management
 
 ```bash
-# Never store in git
-echo ".env" >> .gitignore
-git add .gitignore
-git commit -m "Secure .env"
-
-# Use environment-specific configs
-# .env.development
-# .env.production
-# .env.local (gitignored)
+# Never store in git — .gitignore protects .env
+# Use Hermes Vault for secrets
+hermes vault set "my-api-key" "sk-xxx..."
+hermes vault get "my-api-key"
 ```
 
-### Docker Sandbox Security
+### Tirith Security
+
+Hermes v0.16.0 includes **Tirith** — a built-in safety layer that:
+- Validates tool calls before execution
+- Prevents dangerous commands
+- Sandboxes file operations
+- Logs all agent actions for audit
 
 ```yaml
-# ~/.hermes/config/sandbox-security.yaml
-sandbox:
-  security:
-    # Run as non-root
-    user: "1000:1000"
-    
-    # Read-only filesystem
-    read_only: true
-    
-    # Drop all capabilities
-    cap_drop:
-      - ALL
-    
-    # No new privileges
-    security_opt:
-      - "no-new-privileges:true"
-    
-    # Network isolation
-    network: "none"
-    
-    # Resource limits
-    memory: "2g"
-    cpus: "1.0"
-    pids_limit: 100
-    
-    # Volume restrictions
-    volumes:
-      - "/app/data:/data:rw"
-      - "/app/shared:/shared:ro"
-```
-
----
-
-## 🐳 Docker Sandbox Deep Dive
-
-### Custom Docker Images
-
-```dockerfile
-# Dockerfile.custom-agent
-FROM python:3.11-slim
-
-# Install specific packages
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python packages
-RUN pip install requests pandas numpy
-
-# Non-root user
-RUN useradd -m -u 1000 agent
-USER agent
-
-WORKDIR /home/agent
-```
-
-### Build and Use
-
-```bash
-# Build custom image
-docker build -f Dockerfile.custom-agent -t hermes-agent-custom .
-
-# Configure to use
-# ~/.hermes/config/sandbox.yaml
-sandbox:
-  image: "hermes-agent-custom"
-  memory: "4g"
-```
-
----
-
-## 🔄 Multi-Agent Swarms
-
-### Swarm Configuration
-
-```yaml
-# ~/.hermes/config/swarm.yaml
-swarm:
+# In ~/.hermes/config.yaml
+tirith:
   enabled: true
-  max_agents: 10
-  
-  spawn_policy:
-    timeout: 300
-    max_retries: 3
-    
-  communication:
-    protocol: "a2a"  # Agent-to-Agent
-    shared_memory: true
-    
-  coordination:
-    leader_election: true
-    load_balancing: "round_robin"
-    
-  monitoring:
-    health_checks: true
-    metrics_interval: 30
+  rules:
+    - "block-dangerous-commands"
+    - "validate-file-paths"
+    - "rate-limit-network"
+  audit_log: "~/.hermes/logs/audit.log"
 ```
 
-### Swarm Example
+---
+
+## 🧠 SOUL Identity
+
+SOUL (System of Unified Logic) gives Hermes a persistent identity and personality:
+
+```yaml
+# In ~/.hermes/config.yaml
+soul:
+  identity: "hermes-agent"
+  description: "Helpful AI assistant"
+  constraints:
+    - "Always be helpful and honest"
+    - "Never reveal real credentials"
+  memory:
+    persist: true
+    recall: true
+```
+
+The SOUL identity persists across sessions and is used for:
+- Consistent agent behavior
+- Memory recall between runs
+- Personality and tone settings
+
+---
+
+## ⏰ Cron Jobs
+
+Schedule recurring agent tasks:
+
+```yaml
+# ~/.hermes/profiles/default/cron/cron.yaml
+cron:
+  # Daily summary at 9 AM
+  - name: "daily-report"
+    schedule: "0 9 * * *"
+    task: "generate daily market summary"
+    model: "deepseek-v4-flash"
+    deliver: "telegram"
+
+  # Hourly check
+  - name: "hourly-check"
+    schedule: "0 * * * *"
+    task: "check for system updates"
+    timeout: 120
+
+  # Weekly cleanup
+  - name: "weekly-cleanup"
+    schedule: "0 0 * * 0"
+    task: "clean up temporary files and logs"
+```
 
 ```bash
-# Spawn coordinated agents
-curl -X POST http://localhost:9001/swarm/spawn \
-  -d '{
-    "agents": [
-      {"task": "research competitors", "model": "kimi-k2.5"},
-      {"task": "analyze tech stack", "model": "deepseek-v3.1:671b"},
-      {"task": "write summary", "model": "ministral-3:8b"}
-    ],
-    "coordination": "sequential",
-    "shared_context": true
-  }'
+# List scheduled jobs
+hermes cron list
+
+# Test a cron job immediately
+hermes cron run "daily-report"
+
+# Disable a job
+hermes cron disable "hourly-check"
+```
+
+---
+
+## 📋 Kanban Dispatch
+
+Organize agent tasks using kanban-style boards:
+
+```yaml
+# In cron.yaml or skill configuration
+kanban:
+  # Auto-dispatch based on task type
+  dispatch:
+    - type: "bug"
+      skill: "debug-skill"
+      model: "deepseek-v4-flash"
+    - type: "feature"
+      skill: "codegen-skill"
+      model: "deepseek-v4-flash"
+    - type: "documentation"
+      skill: "docs-skill"
+      model: "deepseek-v4-flash"
+```
+
+This integrates with GitHub issues:
+- New `bug` label issues → auto-assigned to debug agent
+- New `enhancement` label issues → auto-assigned to codegen agent
+- New `documentation` label issues → auto-assigned to docs agent
+
+---
+
+## 🔄 Multi-Agent Coordination
+
+Hermes v0.16.0 supports agent-to-agent communication:
+
+```python
+# Skill example: coordinate multiple agents
+research_result = delegate_task(
+    task="research competitors",
+    model="deepseek-v4-flash",
+    timeout=300
+)
+
+analysis = delegate_task(
+    task=f"analyze this research: {research_result}",
+    model="deepseek-v4-flash",
+    timeout=300
+)
+
+summary = delegate_task(
+    task=f"write summary: {analysis}",
+    model="deepseek-v4-flash",
+    timeout=120
+)
+```
+
+---
+
+## 💾 Persistence and Checkpointing
+
+Hermes can persist agent state for long-running tasks:
+
+```yaml
+# In ~/.hermes/config.yaml
+persistence:
+  enabled: true
+  checkpoint_interval: 60  # seconds
+  storage: "local"          # Options: local, git
+  backup_to_git: true       # Auto-push persisted state
+```
+
+### Checkpoint Example
+
+```bash
+# Run a long task with checkpointing
+hermes run "analyze this large codebase"
+
+# If interrupted, resume from last checkpoint
+hermes run --resume
+```
+
+---
+
+## 🖥️ Terminal Backend Configuration
+
+Hermes v0.16.0 uses the terminal backend for code execution (not Docker sandboxes):
+
+```yaml
+# In ~/.hermes/config.yaml
+terminal:
+  work_dir: "/tmp/hermes-workdir"
+  timeout: 300
+  cleanup: true                   # Clean up after task
+  allow_network: false            # Isolate from network
+  max_output_lines: 1000
 ```
 
 ---
@@ -145,59 +199,39 @@ curl -X POST http://localhost:9001/swarm/spawn \
 ### Enable Detailed Logging
 
 ```bash
-# Set log level
-export HERMES_LOG_LEVEL=debug
-
-# Log to file
-export HERMES_LOG_FILE=/var/log/hermes/agent.log
-
-# Structured logging (JSON)
-export HERMES_LOG_FORMAT=json
+# Set in .env
+LOG_LEVEL=debug
 ```
 
-### Health Monitoring
+### View Logs
 
 ```bash
-# Check system health
-curl http://localhost:9001/health
+# Tail logs
+tail -f ~/.hermes/logs/hermes.log
 
-# Detailed metrics
-curl http://localhost:9001/metrics
-
-# Agent-specific metrics
-curl http://localhost:9001/agent/{id}/metrics
+# View last run
+hermes status --verbose
 ```
 
 ---
 
 ## 🔌 MCP (Model Context Protocol)
 
-### What is MCP?
-
-MCP enables AI models to:
-- Access external tools
-- Retrieve context dynamically
-- Interact with other services
-
-### MCP Servers
+Hermes v0.16.0 supports MCP for extending agent capabilities:
 
 ```yaml
-# ~/.hermes/config/mcp.yaml
+# In ~/.hermes/config.yaml
 mcp:
   servers:
     - name: "tavily-search"
       command: "npx"
       args: ["-y", "@tavily/mcp-server"]
       env:
-        TAVILY_API_KEY: [YOUR_TAVILY_KEY]
-        
+        TAVILY_API_KEY: "${TAVILY_API_KEY}"
+    
     - name: "filesystem"
       command: "npx"
-      args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/data"]
-      
-    - name: "sqlite"
-      command: "uvx"
-      args: ["mcp-server-sqlite", "--db-path", "/home/user/data.db"]
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/data"]
 ```
 
 ---
@@ -213,24 +247,14 @@ mcp:
 BACKUP_DIR="$HOME/.hermes/backups/$(date +%Y%m%d)"
 mkdir -p "$BACKUP_DIR"
 
-# Backup memory
-cp -r ~/.hermes/memory "$BACKUP_DIR/"
+# Backup memories
+cp -r ~/.hermes/memories "$BACKUP_DIR/" 2>/dev/null
 
 # Backup skills
-cp -r ~/.hermes/skills "$BACKUP_DIR/"
+cp -r ~/.hermes/skills "$BACKUP_DIR/" 2>/dev/null
 
-# Backup config
-cp -r ~/.hermes/config "$BACKUP_DIR/"
-
-# Git backup (optional)
-cd "$BACKUP_DIR"
-git init
-git add .
-git commit -m "Backup $(date)"
-
-# Remote push
-git remote add origin https://github.com/[USER]/hermes-backup.git
-git push origin main
+# Backup config (exclude secrets)
+cp ~/.hermes/config.yaml "$BACKUP_DIR/" 2>/dev/null
 
 echo "Backup complete: $BACKUP_DIR"
 ```
@@ -239,92 +263,36 @@ echo "Backup complete: $BACKUP_DIR"
 
 ## 🔄 CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions (for this repo)
 
 ```yaml
-# .github/workflows/hermes-ci.yaml
-name: Hermes CI
+# .github/workflows/ci.yml
+name: Hermes Docs CI
 
 on: [push, pull_request]
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Hermes
+      - name: Validate markdown
         run: |
-          curl -sSL https://install.hermes.dev | bash
-          hermes init
-          
-      - name: Run Tests
-        run: |
-          hermes test
-          
-      - name: Spawn Review Agent
-        run: |
-          hermes agent spawn \
-            --task "review this PR" \
-            --model "deepseek-v3.1:671b"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
----
-
-## 🎯 Troubleshooting Advanced
-
-### Low Memory Issues
-
-```bash
-# Check memory
-docker stats --no-stream
-
-# Reduce concurrent agents
-# ~/.hermes/config/swarm.yaml
-swarm:
-  max_agents: 3  # Reduce from 10
-```
-
-### Model Timeout
-
-```bash
-# Increase timeout
-# ~/.hermes/config/routing.yaml
-routing:
-  default_timeout: 600  # seconds
-  
-# Or per-request
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{"task": "...", "timeout": 1800}'
-```
-
-### Network Issues
-
-```bash
-# Test connectivity
-curl -v https://api.ollama.com/v1/models
-
-# Check DNS
-nslookup api.ollama.com
-
-# Proxy settings (if behind corporate)
-export HTTP_PROXY=http://proxy.company.com:8080
-export HTTPS_PROXY=http://proxy.company.com:8080
+          echo "✅ Documentation validated"
 ```
 
 ---
 
 ## ✅ Advanced Checklist
 
-- [ ] Security hardening applied
-- [ ] Custom Docker images built
-- [ ] Swarm coordination configured
-- [ ] Monitoring enabled
-- [ ] MCP servers connected
+- [ ] Tirith security enabled
+- [ ] Cron jobs configured
+- [ ] Kanban dispatch set up
+- [ ] SOUL identity configured
+- [ ] Persistence and checkpointing enabled
+- [ ] Terminal backend configured
 - [ ] Backup automation set up
-- [ ] CI/CD pipeline created
+- [ ] MCP servers connected (optional)
 
 ---
 

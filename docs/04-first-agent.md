@@ -1,306 +1,184 @@
-# 04 - First Agent Spawn
+# 04 — First Agent
 
-Your first autonomous agent in 5 minutes.
+Your first autonomous agent in 5 minutes with Hermes Agent v0.16.0.
 
 ---
 
 ## 🎯 Goal
 
-Spawn a simple agent that says "Hello World" and understand the spawn process.
+Run a simple agent that says "Hello World" and understand the workflow.
 
 ---
 
-## 📝 Syntax
+## 📝 CLI Syntax
 
 ```bash
-hermes agent spawn [options]
-```
-
-Or via API:
-```bash
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '[payload]'
+hermes run "your prompt here"
 ```
 
 ---
 
 ## 🚀 Quick Start Examples
 
-### Example 1: Basic Spawn
+### Example 1: Basic Agent
 
 ```bash
-# Spawn agent with default settings
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "say hello world",
-    "timeout": 60
-  }'
+# Run a simple task
+hermes run "say hello world in one sentence"
 
-# Response:
-# {
-#   "agent_id": "ag_123456789",
-#   "status": "running",
-#   "model": "kimi-k2.5",
-#   "output": "Hello World!",
-#   "duration_ms": 1234
-# }
+# Output:
+# Hello World! I'm ready to assist you.
 ```
 
-### Example 2: With Specific Model
+### Example 2: Ask a Question
 
 ```bash
-# Use lightweight model for simple task
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "explain what is blockchain",
-    "model": "ministral-3:8b",
-    "timeout": 120
-  }'
-
-# Response: Detailed explanation using ministral (faster)
+hermes run "what is the capital of France?"
 ```
 
 ### Example 3: Code Generation
 
 ```bash
-# Use coding-specialized model
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "write a python function to calculate fibonacci",
-    "model": "deepseek-v3.1:671b",
-    "timeout": 300,
-    "toolsets": ["terminal", "file"]
-  }'
-
-# Response: Python code + file creation
+hermes run "write a Python function to calculate fibonacci numbers"
 ```
 
-### Example 4: Multi-Step Task
+### Example 4: Multi-Step Task (using delegate_task)
 
 ```bash
-# Agent with multiple steps
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "search for ERC-8004 token standard, then summarize key features",
-    "model": "kimi-k2-thinking",
-    "toolsets": ["terminal", "web"],
-    "timeout": 180
-  }'
+# Inside a skill or when scripting, you can use delegate_task
+hermes run "search for recent Python news articles and summarize the top 3"
 ```
 
 ---
 
-## 📦 Spawn Parameters
+## 📦 Using delegate_task
 
-### Required Fields
+`delegate_task` is the primary way to run agents programmatically (from skills or configuration):
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `task` | string | What you want the agent to do |
+```python
+# In a Hermes skill
+result = delegate_task(
+    task="analyze this codebase for security issues",
+    model="deepseek-v4-flash",  # default
+    timeout=300
+)
+```
 
-### Optional Fields
+### Parameters
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `model` | string | kimi-k2.5 | Which AI model to use |
-| `timeout` | int | 60 | Max seconds to run |
-| `toolsets` | array | [] | Tools to enable |
-| `max_iterations` | int | 50 | Max tool calls |
-| `deliver` | string | "origin" | Where to send result |
-| `skills` | array | [] | Skills to load |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `task` | string | (required) | What you want the agent to do |
+| `model` | string | `deepseek-v4-flash` | Which AI model to use |
+| `timeout` | int | 300 | Max seconds to run |
+| `skills` | list | `[]` | Skills to load for this task |
+| `context` | dict | `{}` | Additional context |
 
-### Toolsets Available
+---
 
-```json
-["terminal", "file", "web", "image", "cronjob"]
+## 📦 Run Parameters
+
+### CLI Parameters
+
+| Flag | Description |
+|------|-------------|
+| `--model` | Override model (default: deepseek-v4-flash) |
+| `--timeout` | Max seconds to run |
+| `--profile` | Use a specific profile |
+| `--dry-run` | Validate without executing |
+| `--verbose` | Show detailed output |
+
+### Examples
+
+```bash
+# Use a specific model
+hermes run "explain quantum computing" --model "deepseek-v4-flash"
+
+# Longer timeout
+hermes run "write a comprehensive analysis" --timeout 600
+
+# Use a specific profile
+hermes run "check my calendar" --profile "work"
 ```
 
 ---
 
-## 🎨 Spawn Patterns
+## 🎨 Workflow Patterns
 
 ### Pattern 1: Fire and Forget
 
 ```bash
-# Spawn without waiting for result
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "analyze codebase and email summary",
-    "model": "deepseek-v3.1:671b",
-    "deliver": "telegram"
-  }'
-
-# Agent runs in background, results sent to Telegram
+# Run in background (notifications configured separately)
+hermes run "analyze this repository and send me a summary" &
 ```
 
-### Pattern 2: Batch Queue
+### Pattern 2: Sequential Tasks
 
 ```bash
-# Multiple agents in parallel
-curl -X POST http://localhost:9001/agent/spawn/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tasks": [
-      {"task": "write api docs", "model": "qwen3-coder:480b"},
-      {"task": "write unit tests", "model": "deepseek-v3.1:671b"},
-      {"task": "optimize imports", "model": "ministral-3:14b"}
-    ]
-  }'
+# Chain multiple tasks
+hermes run "first, find all TODO comments in the codebase"
+hermes run "then, create GitHub issues for each TODO"
 ```
 
 ### Pattern 3: Scheduled Agent (Cron)
 
-```bash
-# Recurring agent via cronjob
-curl -X POST http://localhost:9001/cronjob/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "daily-report",
-    "schedule": "0 9 * * *",
-    "prompt": "generate daily crypto market summary",
-    "model": "kimi-k2.5",
-    "deliver": "email"
-  }'
-```
+Scheduled tasks are configured through the cron system — see [Advanced Topics](07-advanced.md).
 
 ### Pattern 4: Delegated Subagent
 
 ```bash
-# One agent delegates to multiple subagents
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "split code review into modules and delegate",
-    "model": "kimi-k2-thinking",
-    "delegate": true,
-    "subagents": [
-      {"task": "review security", "model": "devstral-2:123b"},
-      {"task": "review performance", "model": "deepseek-v3.1:671b"}
-    ]
-  }'
+# Use delegate_task to run sub-tasks
+hermes run "split this code review into modules and delegate each module"
 ```
 
 ---
 
-## 🐛 Debugging Failed Spawns
+## 🐛 Debugging
 
 ### Check Status
 
 ```bash
-# Get agent status
-curl http://localhost:9001/agent/{agent_id}/status
+# View last run status
+hermes status
 
-# Response:
-# {
-#   "agent_id": "ag_123456",
-#   "status": "failed",
-#   "error": "Model not found: invalid-model",
-#   "logs": ["..."]
-# }
-```
-
-### View Logs
-
-```bash
-# All logs
-docker logs hermes-agent
-
-# Specific agent
-curl http://localhost:9001/agent/{agent_id}/logs
-
-# Tail real-time
-docker logs -f hermes-agent | grep "agent_id"
+# View logs
+tail -f ~/.hermes/logs/hermes.log
 ```
 
 ### Common Errors
 
 | Error | Solution |
 |-------|----------|
-| `Model not found` | Check available models: `curl http://localhost:11434/api/tags` |
-| `Timeout exceeded` | Increase timeout parameter |
-| `Permission denied` | Check file permissions or run without sandbox |
-| `Tool not available` | Ensure toolset enabled in spawn request |
+| `Model not found` | Check your Ollama Cloud API key in `.env` |
+| `Timeout exceeded` | Increase `--timeout` parameter |
+| `Connection refused` | Verify network and API key |
+| `Authentication failed` | Check `GITHUB_TOKEN` in `.env` |
 
 ---
 
-## 🎯 Model Selection Guide
+## 🎯 Model Selection
 
-### Quick Tasks (< 1min)
-```json
+| Task Type | Recommended Model |
+|-----------|------------------|
+| Quick Q&A | `deepseek-v4-flash` (default) |
+| Coding | `deepseek-v4-flash` |
+| Analysis | `deepseek-v4-flash` |
+| Complex reasoning | `deepseek-v4-flash` |
 
-{
-    "task": "task",
-    "model": "ministral-3:8b",
-    "timeout": 60
-}
-```
-
-### Coding Tasks
-```json
-
-{
-    "task": "task",
-    "model": "qwen3-coder:480b",
-    "timeout": 60
-}
-```
-
-### Complex Analysis
-```json
-
-{
-    "task": "task",
-    "model": "kimi-k2-thinking",
-    "timeout": 60
-}
-```
-
-### Default (Balanced)
-```json
-
-{
-    "task": "task",
-    "model": "kimi-k2.5",
-    "timeout": 60
-}
-```
-
----
-
-## 🎁 Bonus: Telegram Notifications
-
-```bash
-# Spawn and get notified on completion
-curl -X POST http://localhost:9001/agent/spawn \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "research Ethereum 2025 roadmap",
-    "model": "kimi-k2-thinking",
-    "deliver": "telegram"
-  }'
-
-# You'll get message: "Agent ag_xxx complete: {summary}"
-```
+The default model `deepseek-v4-flash` is suitable for most tasks. See [Model Routing](06-model-routing.md) for advanced configuration.
 
 ---
 
 ## ✅ First Agent Checklist
 
-- [ ] Can spawn basic agent
-- [ ] Can specify model
-- [ ] Can enable toolsets
-- [ ] Can set timeout
+- [ ] Can run basic agent: `hermes run "hello"`
+- [ ] Can specify model with `--model`
+- [ ] Can set timeout with `--timeout`
 - [ ] Can view logs on failure
-- [ ] Can receive notifications
+- [ ] Understands `delegate_task` pattern
 
 ---
 
-## 🚀 Next: Multi-Agent Swarms
+## 🚀 Next Steps
 
 [→ GitHub Integration](05-github-integration.md)

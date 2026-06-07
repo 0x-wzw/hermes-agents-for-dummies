@@ -1,6 +1,6 @@
-# 03 - Configuration
+# 03 — Configuration
 
-Complete configuration guide for Hermes Agent.
+Complete configuration guide for Hermes Agent v0.16.0.
 
 ---
 
@@ -11,9 +11,9 @@ Complete configuration guide for Hermes Agent.
 This repository uses placeholders like:
 - `[YOUR_GITHUB_TOKEN_HERE]`
 - `[YOUR_TELEGRAM_BOT_TOKEN_HERE]`
-- `[YOUR_API_KEY_HERE]`
+- `[YOUR_OLLAMA_API_KEY_HERE]`
 
-Replace these with your actual values in your local `.env` file.
+Replace these with your actual values ONLY in your local `.env` file (which is in `.gitignore`).
 
 ---
 
@@ -31,355 +31,176 @@ nano .env
 
 ### Required Variables
 
+#### Git Identity
+```bash
+GIT_USER_NAME=[YOUR_GIT_USERNAME]
+GIT_USER_EMAIL=[YOUR_EMAIL_HERE]
+```
+
 #### GitHub Integration
 ```bash
 # GitHub Personal Access Token
 # Get from: https://github.com/settings/tokens
 GITHUB_TOKEN=[YOUR_GITHUB_TOKEN_HERE]
-
-# Git Identity (match your GitHub account)
-GIT_USER_NAME="Your Name"
-GIT_USER_EMAIL="your.email@example.com"
 ```
 
-#### Telegram (Optional)
+### Required for Model Inference
+
+#### Ollama Cloud (Primary Provider)
 ```bash
-# Create bot via @BotFather
-telegram__api_key=[YOUR_TELEGRAM_BOT_TOKEN_HERE]
-telegram__chat_id=[YOUR_CHAT_ID_HERE]
+# Get API key from: https://ollama.com/settings/keys
+OLLAMA_API_KEY=[YOUR_OLLAMA_API_KEY_HERE]
 ```
 
-#### Ollama / Model Routing
+#### Ollama Local (Alternative)
 ```bash
-# Default model (already active)
-OLLAMA_API_URL=http://localhost:11434
-DEFAULT_MODEL=kimi-k2.5:cloud
-
-# Optional: API keys for cloud providers
-OLLAMA_CLOUD_TOKEN=[YOUR_OLLAMA_TOKEN_HERE]
-```
-
-#### Docker Sandbox
-```bash
-# Enable isolated execution
-ENABLE_DOCKER_SANDBOX=true
-DOCKER_SOCKET=/var/run/docker.sock
+# Uncomment to use local Ollama instead of cloud
+# OLLAMA_BASE_URL=http://localhost:11434/v1
+# WARNING: OLLAMA_BASE_URL overrides the ollama-cloud provider!
 ```
 
 ### Optional Integrations
 
-#### Tavily (Web Search)
+#### Telegram
 ```bash
-# Get from: tavily.com
-TAVILY_API_KEY=[YOUR_TAVILY_API_KEY_HERE]
+# Create bot via @BotFather on Telegram
+TELEGRAM_BOT_TOKEN=[YOUR_TELEGRAM_BOT_TOKEN_HERE]
 ```
 
-#### Notion (Documentation)
+#### Notion
 ```bash
-# Notion Integration Token
-NOTION_TOKEN=[YOUR_NOTION_TOKEN_HERE]
-NOTION_DATABASE_ID=[YOUR_DATABASE_ID_HERE]
+# Create integration: https://www.notion.so/my-integrations
+NOTION_API_KEY=[YOUR_NOTION_API_KEY_HERE]
 ```
 
-#### Linear (Project Management)
+#### Additional (Commented Out)
 ```bash
-LINEAR_API_KEY=[YOUR_LINEAR_API_KEY_HERE]
+# CLOUDFLARE_ACCOUNT_ID=[YOUR_CLOUDFLARE_ACCOUNT_ID_HERE]
+# CLOUDFLARE_API_TOKEN=[YOUR_CLOUDFLARE_API_TOKEN_HERE]
+# HF_TOKEN=[YOUR_HUGGINGFACE_TOKEN_HERE]
+# WANDB_API_KEY=[YOUR_WANDB_API_KEY_HERE]
 ```
 
-#### HuggingFace
-```bash
-# For model downloads
-HF_TOKEN=[YOUR_HUGGINGFACE_TOKEN_HERE]
-```
-
----
-
-## 📧 Git Configuration
-
-### Method 1: Credential Store (Recommended)
-```bash
-# Store in ~/.git-credentials
-git config --global credential.helper store
-
-# Create credentials file
-echo "https://[USERNAME]:[YOUR_GITHUB_TOKEN_HERE]@github.com" > ~/.git-credentials
-chmod 600 ~/.git-credentials
-```
-
-### Method 2: SSH Key
-```bash
-# Generate SSH key
-ssh-keygen -t ed25519 -C "[YOUR_EMAIL_HERE]" -f ~/.ssh/id_ed25519
-
-# Add to GitHub: https://github.com/settings/keys
-cat ~/.ssh/id_ed25519.pub
-
-# Configure git
-git config --global user.name "[YOUR_GIT_USERNAME]"
-git config --global user.email "[YOUR_EMAIL_HERE]"
-```
-
----
-
-## 🤖 Model Configuration
-
-### Available Models (38 total)
-
-Create `~/.hermes/config/models.yaml`:
-
-```yaml
-models:
-  # Fast/Lightweight
-  ministral-3:3b:
-    size: "5GB"
-    strength: "quick_tasks"
-    token_cost: 0.001
-    
-  ministral-3:8b:
-    size: "10GB"
-    strength: "general"
-    token_cost: 0.002
-    
-  # Coding Specialist
-  deepseek-v3.1:671b:
-    size: "688GB"
-    strength: "coding"
-    token_cost: 0.05
-    
-  qwen3-coder:480b:
-    size: "510GB"
-    strength: "coding"
-    token_cost: 0.04
-    
-  # Reasoning/Analysis
-  kimi-k2-thinking:
-    size: "1.1TB"
-    strength: "reasoning"
-    token_cost: 0.08
-    
-  cogito-2.1:671b:
-    size: "689GB"
-    strength: "philosophy"
-    token_cost: 0.06
-    
-  # Default
-  kimi-k2.5:
-    size: "1.1TB"
-    strength: "general"
-    token_cost: 0.08
-    default: true
-
-# Routing rules
-routing:
-  code_review: deepseek-v3.1:671b
-  debug: qwen3-coder:480b
-  reasoning: kimi-k2-thinking
-  quick_chat: ministral-3:8b
-  default: kimi-k2.5
-```
-
----
-
-## 📱 Telegram Setup
-
-### Step 1: Create Bot
-
-1. Message [@BotFather](https://t.me/botfather)
-2. Send `/newbot`
-3. Follow prompts, save the token
-
-### Step 2: Get Chat ID
-
-```python
-# Quick way: Send any message to your bot
-# Then visit:
-# https://api.telegram.org/bot[YOUR_BOT_TOKEN]/getUpdates
-
-# Look for: "chat":{"id":123456789
-```
-
-### Step 3: Configure
+### Logging
 
 ```bash
-# Add to .env
-telegram__api_key=[YOUR_BOT_TOKEN_HERE]
-telegram__chat_id=[YOUR_CHAT_ID_HERE]
-
-# Test
-curl -X POST "https://api.telegram.org/bot[YOUR_BOT_TOKEN]/sendMessage" \
-  -d "chat_id=[YOUR_CHAT_ID]" \
-  -d "text=Hermes configured!"
-```
-
----
-
-## 💬 Messenger Integrations
-
-### Discord
-```bash
-# Add to .env
-discord__bot_token=[YOUR_DISCORD_BOT_TOKEN_HERE]
-discord__channel_id=[YOUR_CHANNEL_ID_HERE]
-
-# Get token from: https://discord.com/developers/applications
-```
-
-### Slack
-```bash
-# Add to .env
-slack__bot_token=[YOUR_SLACK_BOT_TOKEN_HERE]
-slack__channel_id=[YOUR_CHANNEL_ID_HERE]
-
-# Create app: https://api.slack.com/apps
-```
-
----
-
-## 🐳 Docker Sandbox Config
-
-Create `~/.hermes/config/sandbox.yaml`:
-
-```yaml
-sandbox:
-  enabled: true
-  image: "python:3.11-slim"
-  memory_limit: "2g"
-  cpu_limit: "1.0"
-  timeout: 300
-  network_mode: "none"  # isolated
-  
-  # Allowed volumes (read-only)
-  volumes:
-    - "/app/shared:/shared:ro"
-    - "/app/data:/data:rw"
-  
-  # Security
-  security_opt:
-    - "no-new-privileges:true"
-  read_only: true
-  
-  # Resource monitoring
-  monitoring:
-    enabled: true
-    log_resources: true
-    max_memory_percent: 80
-```
-
----
-
-## 🧠 Memory Configuration
-
-Create `~/.hermes/config/memory.yaml`:
-
-```yaml
-memory:
-  # User memory
-  user_store: "~/.hermes/memory/user.json"
-  
-  # Session memory (ephemeral)
-  session_store: "~/.hermes/memory/session.json"
-  
-  # Long-term storage
-  longterm_store: "~/.hermes/memory/longterm.json"
-  
-  # Backup
-  backup:
-    enabled: true
-    interval: "daily"
-    location: "~/.hermes/backups/memory/"
-    
-  # Sync (if using multiple devices)
-  sync:
-    enabled: false
-    remote: "github"  # Options: github, notion, git
-```
-
----
-
-## 🔄 Skill Management
-
-Create `~/.hermes/config/skills.yaml`:
-
-```yaml
-skills:
-  # Auto-load skills
-  auto_load: true
-  skills_dir: "~/.hermes/skills/"
-  
-  # Remote skill registry
-  registry:
-    enabled: true
-    url: "https://skills.hermes.dev/v1"
-    
-  # Custom skills
-  custom:
-    - name: "my-custom-skill"
-      path: "~/.hermes/skills/custom/"
-      auto_update: false
-      
-  # Skill permissions
-  permissions:
-    allow_file_write: true
-    allow_network: true
-    allow_shell: false  # Require confirmation
-```
-
----
-
-## 📝 Example .env File
-
-```bash
-# =====================================
-# Hermes Agent Configuration
-# =====================================
-
-# Required: GitHub
-GITHUB_TOKEN=[YOUR_GITHUB_TOKEN_HERE]
-GIT_USER_NAME="Your Name"
-GIT_USER_EMAIL="your.email@example.com"
-
-# Optional: Telegram
-telegram__api_key=[YOUR_TELEGRAM_BOT_TOKEN_HERE]
-telegram__chat_id=[YOUR_CHAT_ID_HERE]
-
-# Optional: Discord
-discord__bot_token=[YOUR_DISCORD_BOT_TOKEN_HERE]
-discord__channel_id=[YOUR_CHANNEL_ID_HERE]
-
-# Optional: Slack
-slack__bot_token=[YOUR_SLACK_BOT_TOKEN_HERE]
-slack__channel_id=[YOUR_CHANNEL_ID_HERE]
-
-# Model Routing
-OLLAMA_API_URL=http://localhost:11434
-DEFAULT_MODEL=kimi-k2.5:cloud
-
-# Web Search
-TAVILY_API_KEY=[YOUR_TAVILY_API_KEY_HERE]
-
-# Docker
-ENABLE_DOCKER_SANDBOX=true
-DOCKER_SOCKET=/var/run/docker.sock
-
-# Logging
 LOG_LEVEL=info
-LOG_FILE=~/.hermes/logs/hermes.log
 ```
 
-**Save this as** `.env` (not `.env.example` which is in git)
+---
+
+## 🏠 Hermes Directory Structure
+
+Hermes v0.16.0 stores its configuration under `~/.hermes/`:
+
+```
+~/.hermes/
+├── config.yaml            # Primary config file
+├── profiles/              # Profile system
+│   └── default/           # Your active profile
+│       ├── skills/        # Profile-specific skills
+│       ├── memories/      # Profile-specific memory
+│       └── cron/          # Profile-specific cron jobs
+├── skills/                # Global skills (50+ built-in)
+├── memories/              # Global memory store
+└── logs/                  # Log files
+```
+
+### config.yaml
+
+The primary config file is `~/.hermes/config.yaml`. You rarely need to edit it directly — use `hermes setup` for initial configuration.
+
+Key sections:
+```yaml
+# Provider configuration
+provider:
+  ollama-cloud:
+    api_key: "${OLLAMA_API_KEY}"   # Reads from .env
+    default_model: "deepseek-v4-flash"
+
+# Gateway configuration (for Telegram, etc.)
+gateway:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+
+# Profile settings
+profile:
+  active: "default"
+  auto_load_skills: true
+```
+
+---
+
+## 🔐 Hermes Vault
+
+Hermes v0.16.0 includes a vault system for securely storing secrets:
+
+```bash
+# Store a secret in the vault
+hermes vault set "my-secret-name" "my-secret-value"
+
+# Retrieve a secret
+hermes vault get "my-secret-name"
+
+# List vault keys
+hermes vault list
+```
+
+The vault encrypts secrets at rest. Use this instead of plaintext in config files.
+
+---
+
+## 🔄 Profiles System
+
+Hermes supports multiple profiles for different environments:
+
+```bash
+# List profiles
+hermes profile list
+
+# Create a new profile
+hermes profile create "work"
+hermes profile create "personal"
+
+# Switch profile
+hermes profile switch "work"
+
+# View active profile
+hermes profile current
+```
+
+Each profile has its own `skills/`, `memories/`, `cron/` directories under `~/.hermes/profiles/<name>/`.
+
+---
+
+## 🚪 Gateway Configuration
+
+The gateway routes messages between platforms and Hermes:
+
+```yaml
+# In config.yaml (set via wizard or manually)
+gateway:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    polling_interval: 2  # seconds
+```
+
+For now, Telegram is the primary gateway. Support for Discord and Slack is planned.
 
 ---
 
 ## ✅ Configuration Checklist
 
-- [ ] `.env` file created with your credentials
+- [ ] `.env` file created with your credentials (placeholders replaced)
 - [ ] GitHub token has `repo` scope
-- [ ] Telegram bot created and tested
-- [ ] Model routing configured
-- [ ] Docker sandbox enabled (optional)
-- [ ] Memory backup configured
-- [ ] Skills directory set up
-- [ ] `.env` added to `.gitignore` ⚠️
+- [ ] Ollama Cloud API key configured
+- [ ] Telegram bot created and tested (optional)
+- [ ] `hermes setup` completed
+- [ ] Vault initialized for secrets
+- [ ] Profile configured (if using multi-environment)
+- [ ] `.env` added to `.gitignore` ✅
 
 ---
 
@@ -387,18 +208,19 @@ LOG_FILE=~/.hermes/logs/hermes.log
 
 ```bash
 # Test GitHub connectivity
-curl -H "Authorization: token [YOUR_GITHUB_TOKEN]" \
+curl -H "Authorization: Bearer [YOUR_GITHUB_TOKEN]" \
   https://api.github.com/user | grep login
 
-# Test Telegram
-curl -X POST "https://api.telegram.org/bot[YOUR_BOT_TOKEN]/getMe"
+# Test Ollama Cloud connectivity
+curl -H "Authorization: Bearer [YOUR_OLLAMA_API_KEY]" \
+  https://api.ollama.com/api/tags
 
-# Test Ollama
-curl http://localhost:11434/api/tags
+# Test Hermes status
+hermes setup --status
 ```
 
 ---
 
 ## 🎯 Next Steps
 
-[→ First Agent Spawn](04-first-agent.md)
+[→ First Agent](04-first-agent.md)

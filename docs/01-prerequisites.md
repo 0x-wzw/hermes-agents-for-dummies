@@ -1,43 +1,42 @@
-# 01 - Prerequisites
+# 01 — Prerequisites
 
-Before diving into Hermes installation, ensure your environment is ready.
+Before installing Hermes Agent v0.16.0, ensure your environment is ready.
 
 ---
 
 ## 🖥️ Operating System
 
-### Recommended: Linux
-- **Ubuntu 22.04 LTS+** (tested & recommended)
-- Debian-based distros
-- CentOS/RHEL (with adjustments)
-
-### macOS
-- macOS 12 (Monterey) or later
-- Homebrew recommended for dependencies
-
-### Windows
-- **WSL2 required** — Native Windows support limited
-- Ubuntu 22.04 LTS in WSL2
+| OS | Status | Notes |
+|----|--------|-------|
+| **Linux** (Ubuntu 22.04+ / Debian) | ✅ Recommended | Fully tested |
+| **macOS** (12 Monterey+) | ✅ Supported | Homebrew recommended |
+| **Windows** (WSL2) | ✅ Works | Ubuntu 22.04 LTS in WSL2 |
+| Windows (native) | ❌ Not supported | Use WSL2 |
 
 ---
 
 ## 📦 Required Software
 
-### 1. Python 3.10+
+### 1. Python 3.11+
+
+Hermes Agent v0.16.0 requires **Python 3.11 or higher**.
 
 ```bash
 # Check version
-python3 --version  # Should be 3.10+
+python3 --version  # Must be 3.11+
 
 # Ubuntu/Debian installation
 sudo apt update
 sudo apt install python3 python3-pip python3-venv
 
 # macOS with Homebrew
-brew install python
+brew install python@3.11
+
+# Verify
+python3 --version  # Should show 3.11.x or 3.12.x
 ```
 
-### 2. Git
+### 2. Git (Required)
 
 ```bash
 # Check installation
@@ -46,41 +45,35 @@ git --version
 # Ubuntu/Debian
 sudo apt install git
 
-# Configure (use your name/email, not placeholders)
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
+# macOS
+brew install git
+
+# Configure (use your name/email)
+git config --global user.name "[YOUR_GIT_USERNAME]"
+git config --global user.email "[YOUR_EMAIL_HERE]"
 ```
 
-### 3. Docker (Recommended)
+### 3. uv (Recommended Package Manager)
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager — preferred over pip for installing Hermes.
 
 ```bash
-# Install Docker
-# Ubuntu:
-sudo apt install docker.io docker-compose
-sudo systemctl enable --now docker
+# Install uv (Linux/macOS)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# macOS:
-brew install --cask docker
+# Or via pip
+pip install uv
 
 # Verify
-docker --version
-docker-compose --version
-
-# Add user to docker group (logout required)
-sudo usermod -aG docker $USER
+uv --version
 ```
 
-### 4. curl
+### 4. pip (Alternative)
+
+If you prefer not to use uv, ensure pip is up to date:
 
 ```bash
-# Usually pre-installed, verify:
-curl --version
-
-# Ubuntu:
-sudo apt install curl
-
-# macOS:
-brew install curl
+python3 -m pip install --upgrade pip
 ```
 
 ---
@@ -90,36 +83,43 @@ brew install curl
 You'll need accounts on the following services:
 
 ### 1. GitHub (Required)
-- Free account sufficient
-- Purpose: Code storage, GitHub Actions, CLI integration
-- **Setup**: [github.com](https://github.com)
+| Item | Details |
+|------|---------|
+| **Account** | Free account: [github.com](https://github.com) |
+| **Purpose** | Code storage, backup, CI/CD integration |
+| **Token** | Classic PAT with `repo` + `workflow` scopes |
 
-### 2. Telegram (Optional but Recommended)
-- Bot account for messaging
-- Purpose: Agent notifications, remote control
-- **Setup**: [BotFather](https://t.me/botfather)
+### 2. Ollama Cloud (Required for Model Inference)
+| Item | Details |
+|------|---------|
+| **Account** | Free account: [ollama.com](https://ollama.com) |
+| **Purpose** | Access to 41+ AI models (deepseek-v4-flash, etc.) |
+| **API Key** | Generate at: [ollama.com/settings/keys](https://ollama.com/settings/keys) |
 
-### 3. Ollama API Access (Optional)
-- For multi-model routing
-- Purpose: Access to 38+ AI models
-- **Default**: Uses built-in kimi-k2.5
+### 3. Telegram (Optional but Recommended)
+| Item | Details |
+|------|---------|
+| **Bot** | Create via [@BotFather](https://t.me/botfather) |
+| **Purpose** | Agent notifications, remote control |
 
-### 4. Tavily API (Optional)
-- Web search capabilities
-- Purpose: Agent web research
-- **Setup**: [tavily.com](https://tavily.com)
+### 4. Notion (Optional)
+| Item | Details |
+|------|---------|
+| **Integration** | Create at: [notion.so/my-integrations](https://www.notion.so/my-integrations) |
+| **Purpose** | Documentation & knowledge management |
 
 ---
 
 ## 💾 Storage Requirements
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| Hermes Core | 2GB | 5GB |
-| Models (cached) | 10GB | 50GB+ |
-| Docker Images | 5GB | 20GB |
-| Logs | 1GB | 5GB |
-| **Total** | **18GB** | **80GB+** |
+| Component | Minimum |
+|-----------|---------|
+| Hermes Core | 5GB |
+| Logs & cache | 1GB |
+| **Total** | **6GB** |
+
+> **Note:** Hermes Agent v0.16.0 uses Ollama Cloud for inference — no local model downloads needed.
+> This dramatically reduces storage requirements compared to local model hosting.
 
 ---
 
@@ -130,30 +130,32 @@ You'll need accounts on the following services:
 | Service | Port | Purpose |
 |---------|------|---------|
 | GitHub | 443/tcp | Code fetch/push |
-| Ollama API | 443/tcp | Model inference |
-| Docker Hub | 443/tcp | Image pulls |
+| Ollama Cloud API | 443/tcp | Model inference |
 | Telegram API | 443/tcp | Messaging |
+| Notion API | 443/tcp | Documentation |
+| PyPI | 443/tcp | Package installation |
 
 ### Firewall Settings
 
 ```bash
 # If behind corporate firewall, whitelist:
 - github.com
-- api.ollama.com
+- api.ollama.com (or ollama.com)
 - api.telegram.org
-- registry-1.docker.io
+- api.notion.com (or www.notion.so)
+- pypi.org
+- files.pythonhosted.org
 ```
 
 ---
 
 ## 🧪 Quick Environment Check
 
-Run this script to verify your setup:
+Save this as `check-env.sh` and run to verify your setup:
 
 ```bash
 #!/bin/bash
-
-echo "=== Hermes Environment Check ==="
+echo "=== Hermes v0.16.0 Environment Check ==="
 
 # Check Python
 python3 --version 2>/dev/null || echo "❌ Python not found"
@@ -161,9 +163,8 @@ python3 --version 2>/dev/null || echo "❌ Python not found"
 # Check Git
 git --version 2>/dev/null || echo "❌ Git not found"
 
-# Check Docker
-docker --version 2>/dev/null || echo "❌ Docker not found"
-docker-compose --version 2>/dev/null || echo "❌ Docker Compose not found"
+# Check uv (preferred)
+uv --version 2>/dev/null || echo "ℹ️  uv not found (pip alternative works)"
 
 # Check curl
 curl --version | head -1 || echo "❌ curl not found"
@@ -176,14 +177,11 @@ echo "✅ Available disk space: $DF"
 FREE=$(free -h 2>/dev/null | grep Mem | awk '{print $7}')
 if [ -n "$FREE" ]; then
     echo "✅ Available memory: $FREE"
-else
-    echo "ℹ️  Memory check: vm_stat or free not found"
 fi
 
 echo "=== Check Complete ==="
 ```
 
-Save as `check-env.sh` and run:
 ```bash
 chmod +x check-env.sh
 ./check-env.sh
@@ -193,42 +191,18 @@ chmod +x check-env.sh
 
 ## ✅ Pre-Flight Checklist
 
-- [ ] Python 3.10+ installed
+- [ ] Python 3.11+ installed and working
 - [ ] Git configured with username/email
-- [ ] Docker installed & running
-- [ ] GitHub account created
+- [ ] GitHub account + Personal Access Token (PAT)
+- [ ] Ollama Cloud account + API key
 - [ ] Telegram bot created (optional)
-- [ ] 20GB+ free disk space
+- [ ] Notion integration set up (optional)
+- [ ] 6GB+ free disk space
 - [ ] Firewall allows HTTPS (443) outbound
 
 ---
 
-## 🚨 Common Issues
-
-### Issue: "Docker daemon not running"
-```bash
-sudo systemctl start docker
-sudo systemctl enable docker
-```
-
-### Issue: "Permission denied on Docker"
-```bash
-sudo usermod -aG docker $USER
-# Logout and login again
-```
-
-### Issue: "Python not found"
-```bash
-# Some systems use 'python' not 'python3'
-# Create alias:
-alias python=python3
-# Or use full path:
-/usr/bin/python3 --version
-```
-
----
-
-## 🎯 Next Steps
+## 🚀 Next Steps
 
 Once all checks pass:
 

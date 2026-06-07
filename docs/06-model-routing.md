@@ -1,6 +1,6 @@
-# 06 - Model Routing
+# 06 — Model Routing
 
-Intelligent model selection for optimal AI performance.
+Intelligent model selection for optimal AI performance with Hermes Agent v0.16.0.
 
 ---
 
@@ -10,266 +10,202 @@ Model routing automatically selects the best AI model for each task based on:
 - **Task type** (coding, reasoning, quick chat)
 - **Complexity** (simple vs. deep analysis)
 - **Speed requirements** (fast vs. thorough)
-- **Cost considerations** (token usage)
+
+Hermes v0.16.0 uses **Ollama Cloud** as the primary provider with **deepseek-v4-flash** as the default model.
 
 ---
 
-## 📊 Available Models (38 Total)
+## 📊 Available Models (41+ on Ollama Cloud)
 
-### By Category
+### Default Model
 
-#### 🚀 Fast Models (< 10GB)
-| Model | Size | Best For | Speed |
-|-------|------|----------|-------|
-| `ministral-3:3b` | 5GB | Quick Q&A | ⚡ Ultra-fast |
-| `ministral-3:8b` | 10GB | General tasks | ⚡ Fast |
-| `gemma3:4b` | 8GB | Lightweight work | ⚡ Ultra-fast |
+| Model | Provider | Best For |
+|-------|----------|----------|
+| `deepseek-v4-flash` | Ollama Cloud | General purpose (balanced speed/quality) |
 
-#### 💻 Coding Specialists
-| Model | Size | Strengths | Speed |
-|-------|------|-----------|-------|
-| `deepseek-v3.1:671b` | 688GB | Code review, debugging | 🐢 Thorough |
-| `qwen3-coder:480b` | 510GB | Feature implementation | 🐢 Thorough |
-| `qwen3-coder-next` | 82GB | Fast code gen | 🚀 Medium |
-| `devstral-2:123b` | 128GB | Security audits | 🚀 Fast |
+### Available Models on Ollama Cloud
 
-#### 🧠 Reasoning Champions
-| Model | Size | Strengths | Speed |
-|-------|------|-----------|-------|
-| `kimi-k2-thinking` | 1.1TB | Deep analysis | 🐢 Slow |
-| `cogito-2.1:671b` | 689GB | Philosophy/logic | 🐢 Thorough |
-| `deepseek-v3.2` | 689GB | Complex reasoning | 🐢 Thorough |
+Ollama Cloud provides 41+ models. Key categories:
 
-#### 🎯 General Purpose
-| Model | Size | Strengths | Speed |
-|-------|------|-----------|-------|
-| `kimi-k2.5` (default) | 1.1TB | Everything | ⚖️ Balanced |
-| `kimi-k2:1t` | 1.1TB | General tasks | ⚖️ Balanced |
-| `glm-5` | 756GB | Research/writing | ⚖️ Balanced |
-| `qwen3.5:397b` | 397GB | Balanced perf | ⚖️ Balanced |
+#### Reasoning (Advanced)
+| Model | Strengths |
+|-------|-----------|
+| `deepseek-v4-flash` | Fast, general reasoning |
+| `deepseek-r1` | Deep reasoning, complex analysis |
+| `deepseek-r1-distill-llama-70b` | High-quality distilled reasoning |
+| `qwq-32b` | Quick question answering |
 
-#### 🎨 Vision Models
-| Model | Size | Strengths |
-|-------|------|-----------|
-| `qwen3-vl:235b-instruct` | 470GB | Image analysis |
-| `qwen3-vl:235b` | 470GB | Vision + text |
+#### Coding
+| Model | Strengths |
+|-------|-----------|
+| `deepseek-v4-flash` | General coding tasks |
+| `qwen2.5-coder-32b` | Inline code generation |
+| `codegeex4` | Code completion and generation |
+
+#### General Purpose
+| Model | Strengths |
+|-------|-----------|
+| `llama_3_3-70b` | Versatile chat and analysis |
+| `qwen-2.5-72b` | Multi-language support |
+| `nemotron-70b` | Instruction following |
+| `mistral-small-24b` | Lightweight, fast responses |
+
+#### Vision / Multimodal
+| Model | Strengths |
+|-------|-----------|
+| `llama_3_2_11b-vision-instruct-fp16` | Image analysis |
+| `llama_3_2_90b-vision-instruct-fp16` | Advanced vision tasks |
+| `minicpm-v2_6` | Vision + language |
+
+> **Full list:** Visit [ollama.com/models](https://ollama.com/models) for the complete catalog.
 
 ---
 
-## 🎛️ Routing Configuration
+## ⚙️ Provider Configuration
 
-Create `~/.hermes/config/routing.yaml`:
+### Ollama Cloud (Default)
 
-```yaml
-routing:
-  # Default model
-  default: "kimi-k2.5"
-  
-  # Task-specific routing
-  tasks:
-    code_review:
-      model: "deepseek-v3.1:671b"
-      max_iterations: 100
-      toolsets: ["terminal", "file"]
-      
-    bug_fix:
-      model: "qwen3-coder:480b"
-      reasoning: true
-      
-    quick_answer:
-      model: "ministral-3:8b"
-      timeout: 30
-      
-    complex_analysis:
-      model: "kimi-k2-thinking"
-      timeout: 300
-      
-    security_audit:
-      model: "devstral-2:123b"
-      toolsets: ["terminal", "security"]
-      
-    documentation:
-      model: "ministral-3:8b"
-      max_tokens: 2000
+```bash
+# In .env
+OLLAMA_API_KEY=[YOUR_OLLAMA_API_KEY_HERE]
+```
 
-  # Fallback chain
-  fallback:
-    - "kimi-k2.5"
-    - "kimi-k2:1t"
-    - "ministral-3:14b"
+Get your API key from: https://ollama.com/settings/keys
 
-  # Cost optimization
-  cost_optimization:
-    enabled: true
-    max_cost_per_request: 0.10
-    prefer_cheaper_if_under_95_percentile: true
+### Ollama Local (Alternative)
+
+If you prefer to run models locally:
+
+```bash
+# In .env (uncomment to override cloud provider)
+# OLLAMA_BASE_URL=http://localhost:11434/v1
+# WARNING: This overrides the ollama-cloud provider!
+```
+
+Local Ollama requires:
+- Running `ollama serve` locally
+- Models pulled locally via `ollama pull <model>`
+- Sufficient hardware (varies by model)
+
+---
+
+## 🎛️ Model Selection in Practice
+
+### Default: deepseek-v4-flash
+
+The default model `deepseek-v4-flash` is suitable for most tasks:
+
+```bash
+hermes run "analyze this Python code for bugs"
+# Uses: deepseek-v4-flash
+```
+
+### Per-Task Routing with delegate_task
+
+When building skills, you can specify the model per task:
+
+```python
+# In a skill
+result = delegate_task(
+    task="write a complex algorithm",
+    model="deepseek-v4-flash",  # or any model from Ollama Cloud
+    timeout=300
+)
+```
+
+### CLI Override
+
+```bash
+# Force a different model
+hermes run "analyze this image" --model "llama_3_2_90b-vision-instruct-fp16"
 ```
 
 ---
 
-## 💻 Usage Examples
+## 🧪 Testing Models
 
-### Automatic Routing (Recommended)
-
-```bash
-# Let system choose best model
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{
-    "task": "fix this bug",
-    "auto_route": true
-  }'
-
-# Routes to: deepseek-v3.1:671b (detected code task)
-```
-
-### Explicit Model Selection
+### List Available Models via Ollama API
 
 ```bash
-# Force specific model
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{
-    "task": "analyze trade-offs",
-    "model": "kimi-k2-thinking"
-  }'
-```
-
-### Cost-Conscious Routing
-
-```bash
-# Use cheaper models when possible
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{
-    "task": "summarize this article",
-    "max_cost": 0.01,
-    "auto_route": true
-  }'
-
-# May route to ministral-3:8b instead of kimi-k2.5
-```
-
----
-
-## 🔧 Testing Models
-
-### List Available Models
-
-```bash
-curl http://localhost:11434/api/tags | jq '.models[].name'
-
-# Or via Hermes
-curl http://localhost:9001/models/list
+curl -H "Authorization: Bearer [YOUR_OLLAMA_API_KEY]" \
+  https://api.ollama.com/api/tags
 ```
 
 ### Quick Model Test
 
 ```bash
-#!/bin/bash
-# test-models.sh
-
-MODELS=("ministral-3:8b" "deepseek-v3.1:671b" "kimi-k2.5")
-
-for MODEL in "${MODELS[@]}"; do
-  echo "Testing: $MODEL"
-  time curl -X POST http://localhost:9001/agent/spawn \
-    -d "{\"task\": \"say hello\", \"model\": \"$MODEL\", \"timeout\": 60}"
-  echo "---"
-done
+hermes run "say hello" --model "deepseek-v4-flash"
+hermes run "say hello" --model "mistral-small-24b"
 ```
 
 ---
 
-## 🎯 Routing Best Practices
+## 🎯 Model Selection Guide
 
-### 1. Task Complexity Matching
-```
-Simple tasks → Fast models (ministral-3:8b)
-Coding tasks → Coding specialists (deepseek, qwen3-coder)
-Analysis → Reasoning models (kimi-k2-thinking)
-Vision tasks → Multimodal (qwen3-vl)
-```
-
-### 2. Speed vs. Quality Trade-offs
-```
-Quick answers → Use fast models
-tCritical decisions → Use thorough models
-Iterative development → Balance based on phase
-```
-
-### 3. Cost Optimization
-```yaml
-# Enable cost tracking
-cost_tracking:
-  enabled: true
-  log_usage: true
-  
-# Set budget constraints
-budget:
-  daily_limit: 5.00
-  per_task_limit: 0.50
-```
+| Task Type | Recommended Model |
+|-----------|------------------|
+| Quick Q&A | `deepseek-v4-flash` |
+| Coding | `deepseek-v4-flash` |
+| Code generation | `qwen2.5-coder-32b` |
+| Analysis/Reasoning | `deepseek-v4-flash` |
+| Vision tasks | `llama_3_2_90b-vision-instruct-fp16` |
+| Fast responses | `mistral-small-24b` |
+| Balanced | `deepseek-v4-flash` |
 
 ---
 
-## 📈 Performance Metrics
+## 📈 Per-Task Routing in delegate_task
 
-### Track Model Performance
-
-```bash
-# Get routing statistics
-curl http://localhost:9001/routing/stats
-
-# Response:
-# {
-#   "total_requests": 1000,
-#   "model_usage": {
-#     "ministral-3:8b": 450,
-#     "deepseek-v3.1:671b": 200,
-#     "kimi-k2.5": 350
-#   },
-#   "avg_latency_ms": 2345,
-#   "cost_savings_percent": 35
-# }
-```
-
----
-
-## 🚀 Advanced: Custom Routing Rules
-
-### Create Custom Router
+For advanced workflows, you can route different sub-tasks to different models:
 
 ```python
-# custom_router.py
+# Multi-step workflow with model routing
+research = delegate_task(
+    task="research the topic",
+    model="qwq-32b",  # fast for research
+    timeout=120
+)
 
-def route_task(task_description: str, context: dict) -> str:
-    """Custom routing logic."""
-    
-    task_lower = task_description.lower()
-    
-    # Security tasks
-    if any(word in task_lower for word in ["security", "vulnerability", "audit"]):
-        return "devstral-2:123b"
-    
-    # Math-heavy
-    if any(word in task_lower for word in ["calculate", "math", "formula"]):
-        return "glm-5.1"
-    
-    # Default to auto-route
-    return None  # Falls back to system router
+analysis = delegate_task(
+    task=f"analyze this research: {research}",
+    model="deepseek-v4-flash",  # deep for analysis
+    timeout=300
+)
+
+summary = delegate_task(
+    task=f"summarize: {analysis}",
+    model="mistral-small-24b",  # lightweight for summary
+    timeout=60
+)
+```
+
+---
+
+## 🔧 Model Router Skill
+
+Hermes v0.16.0 has a built-in `model-router` skill:
+
+```bash
+# View the skill
+hermes run "show me the model-router skill documentation"
+
+# Use auto-routing
+hermes run "fix this bug" --skill "model-router"
+# Automatically selects the best model for debugging
 ```
 
 ---
 
 ## ✅ Model Routing Checklist
 
-- [ ] Know available models in your system
-- [ ] Configure routing.yaml
-- [ ] Test automatic routing
-- [ ] Set up cost tracking
-- [ ] Test fallback behavior
-- [ ] Create custom rules if needed
+- [ ] Ollama Cloud API key configured in `.env`
+- [ ] Can call the default model (`deepseek-v4-flash`)
+- [ ] Can override model with `--model` flag
+- [ ] Understands per-task routing with `delegate_task`
+- [ ] Knows how to list available models
 
 ---
 
-## 🎓 Next Steps
+## 🚀 Next Steps
 
 [→ Advanced Topics](07-advanced.md)

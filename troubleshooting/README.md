@@ -1,121 +1,137 @@
 # 🚨 Troubleshooting Guide
 
-Common issues and solutions for Hermes Agent.
+Common issues and solutions for Hermes Agent v0.16.0.
 
 ---
 
 ## 🔥 Critical Issues
 
-### Issue: "Port 9001 already in use"
+### Issue: "Hermes not found / command not found"
 
-**Problem:** Another service is using the port.
+**Symptom:** `hermes --version` fails.
 
 **Solution:**
 ```bash
-# Find process
-sudo lsof -i :9001
-# or
-sudo netstat -tulpn | grep 9001
+# Check if installed
+pip list | grep hermes-agent
 
-# Kill process
-sudo kill -9 <PID>
+# Reinstall
+pip install hermes-agent
 
-# Or use different port
-docker run -p 9002:9001 hermes/ai-agent:latest
+# Check Python version (must be 3.11+)
+python3 --version
+
+# Check if venv is active
+which hermes
 ```
 
 ---
 
-### Issue: "Docker daemon not running"
+### Issue: "Permission denied (publickey)" — Git
 
-**Symptom:** Cannot connect to Docker
-
-**Solution:**
-```bash
-# Linux
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Check status
-sudo systemctl status docker
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-# Logout and login again
-```
-
----
-
-### Issue: "Permission denied (publickey)" - Git
-
-**Symptom:** Cannot clone/pull from GitHub
+**Symptom:** Cannot clone/pull from GitHub via SSH.
 
 **Solution:**
 ```bash
 # Option 1: Use HTTPS instead of SSH
-git remote set-url origin https://github.com/[USER]/[REPO].git
+git remote set-url origin https://github.com/[YOUR_USERNAME]/[REPO].git
 
 # Option 2: Fix SSH keys
 ssh-add ~/.ssh/id_ed25519
 
 # Option 3: Generate new SSH key
-ssh-keygen -t ed25519 -C "email@example.com"
+ssh-keygen -t ed25519 -C "[YOUR_EMAIL_HERE]"
 cat ~/.ssh/id_ed25519.pub
 # Add to GitHub: https://github.com/settings/keys
 ```
 
 ---
 
-## 🤖 Model Issues
+### Issue: "Git authentication failed"
 
-### Issue: "Model not found"
-
-**Problem:** Requested model not available.
+**Symptom:** Git push/pull fails with 401.
 
 **Solution:**
 ```bash
-# Check available models
-curl http://localhost:11434/api/tags
+# Check GITHUB_TOKEN is set in .env
+grep GITHUB_TOKEN .env
 
-# Pull missing model
-curl -X POST http://localhost:11434/api/pull \
-  -d '{"name": "ministral-3:8b"}'
+# Test token
+curl -H "Authorization: Bearer [YOUR_GITHUB_TOKEN]" \
+  https://api.github.com/user
 
-# Check Ollama is running
-docker ps | grep ollama
-# or
-ollama serve
+# If token expired, regenerate at:
+# https://github.com/settings/tokens
+
+# For git operations, use credential helper:
+git config --global credential.helper store
+```
+
+---
+
+## 🤖 Model Issues
+
+### Issue: "Ollama Cloud connection failed"
+
+**Symptom:** Cannot connect to Ollama Cloud to run models.
+
+**Solution:**
+```bash
+# Check API key is set
+grep OLLAMA_API_KEY .env
+
+# Test connection
+curl -H "Authorization: Bearer [YOUR_OLLAMA_API_KEY]" \
+  https://api.ollama.com/api/tags
+
+# If fails, regenerate key at:
+# https://ollama.com/settings/keys
+
+# Check network connectivity
+curl -v https://api.ollama.com
+```
+
+---
+
+### Issue: "Model not found" / "Invalid model"
+
+**Symptom:** Specified model name not recognized.
+
+**Solution:**
+```bash
+# List available models
+curl -H "Authorization: Bearer [YOUR_OLLAMA_API_KEY]" \
+  https://api.ollama.com/api/tags
+
+# Use correct model name (e.g., deepseek-v4-flash)
+hermes run "hello" --model "deepseek-v4-flash"
+
+# Check for typos in model name
 ```
 
 ---
 
 ### Issue: "Model timeout"
 
-**Problem:** Model taking too long.
+**Symptom:** Model taking too long to respond.
 
 **Solution:**
 ```bash
-# Increase timeout in request
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{"task": "...", "timeout": 600}'
+# Increase timeout
+hermes run "complex analysis" --timeout 600
 
 # Use faster model
-curl -X POST http://localhost:9001/agent/spawn \
-  -d '{"task": "...", "model": "ministral-3:8b", "timeout": 60}'
+hermes run "complex analysis" --model "mistral-small-24b" --timeout 300
 
-# Check system resources
-free -h
-htop
-df -h
+# Check network latency
+ping api.ollama.com
 ```
 
 ---
 
 ## 🔐 Authentication Issues
 
-### Issue: "401 Bad Credentials"
-
-**Problem:** Token expired or invalid.
+### Issue: "401 Bad Credentials" — GitHub
 
 **Solution:**
 ```bash
@@ -123,10 +139,11 @@ df -h
 # https://github.com/settings/tokens
 
 # Update .env
-export GITHUB_TOKEN=[NEW_TOKEN_HERE]
+GITHUB_TOKEN=[YOUR_NEW_GITHUB_TOKEN_HERE]
 
-# Or update git credentials
-echo "https://[USER]:[TOKEN]@github.com" > ~/.git-credentials
+# Test with Bearer auth
+curl -H "Authorization: Bearer [YOUR_GITHUB_TOKEN]" \
+  https://api.github.com/user
 ```
 
 ---
@@ -136,50 +153,74 @@ echo "https://[USER]:[TOKEN]@github.com" > ~/.git-credentials
 **Solution:**
 ```bash
 # Test bot
-curl -X POST "https://api.telegram.org/bot[TOKEN]/getMe"
+curl -X POST "https://api.telegram.org/bot[YOUR_BOT_TOKEN]/getMe"
 
-# Get chat ID
-curl -X POST "https://api.telegram.org/bot[TOKEN]/getUpdates"
+# Check bot token in .env
+grep TELEGRAM_BOT_TOKEN .env
 
 # Send test message
-curl -X POST "https://api.telegram.org/bot[TOKEN]/sendMessage" \
-  -d "chat_id=[CHAT_ID]" \
-  -d "text=Test message"
+curl -X POST "https://api.telegram.org/bot[YOUR_BOT_TOKEN]/sendMessage" \
+  -d "chat_id=[YOUR_CHAT_ID]" \
+  -d "text=Test from troubleshooting"
 ```
 
 ---
 
-## 🐳 Docker Issues
-
-### Issue: "Container exited immediately"
+### Issue: "Notion API not working"
 
 **Solution:**
 ```bash
-# Check logs
-docker logs hermes-agent
+# Check API key
+grep NOTION_API_KEY .env
 
-# Run interactively for debugging
-docker run -it hermes/ai-agent:latest /bin/bash
+# Test connection
+curl -H "Authorization: Bearer [YOUR_NOTION_API_KEY]" \
+  -H "Notion-Version: 2022-06-28" \
+  https://api.notion.com/v1/users/me
 
-# Check environment variables
-docker inspect hermes-agent | grep -A 10 Env
+# Ensure integration is shared with your workspace
+# https://www.notion.so/my-integrations
 ```
 
 ---
 
-### Issue: "No space left on device"
+## 🏠 Profile Issues
+
+### Issue: "Profile not found"
+
+**Symptom:** `hermes profile switch "work"` fails.
 
 **Solution:**
 ```bash
-# Clean up Docker
-docker system prune -a
-docker volume prune
+# List available profiles
+hermes profile list
 
-# Clean up old images
-docker images -q | xargs docker rmi
+# Create profile
+hermes profile create "work"
 
-# Check disk space
-df -h
+# Switch
+hermes profile switch "work"
+
+# Check active profile
+hermes profile current
+```
+
+---
+
+### Issue: "Vault not initialized"
+
+**Symptom:** `hermes vault set` fails.
+
+**Solution:**
+```bash
+# Initialize vault
+hermes vault init
+
+# Set a secret
+hermes vault set "my-secret" "my-value"
+
+# Verify
+hermes vault list
 ```
 
 ---
@@ -191,17 +232,16 @@ df -h
 **Solution:**
 ```bash
 # Check if service is running
-sudo systemctl status hermes
+hermes --version
 
-# Check port
-sudo lsof -i :9001
+# Check DNS
+nslookup api.ollama.com
 
 # Check firewall
 sudo ufw status
-sudo ufw allow 9001/tcp
 
-# Test locally
-curl http://localhost:9001/health
+# Test network
+curl -v https://api.ollama.com
 ```
 
 ---
@@ -211,14 +251,14 @@ curl http://localhost:9001/health
 **Solution:**
 ```bash
 # Test DNS
-nslookup api.github.com
+nslookup github.com
 nslookup api.ollama.com
 
 # Check /etc/resolv.conf
 cat /etc/resolv.conf
 
-# Restart network
-sudo systemctl restart systemd-resolved
+# Try different DNS
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
 ```
 
 ---
@@ -228,28 +268,22 @@ sudo systemctl restart systemd-resolved
 ### Enable Debug Mode
 
 ```bash
-# Set debug level
-export HERMES_LOG_LEVEL=debug
-export HERMES_LOG_FILE=/var/log/hermes/debug.log
+# Set in .env
+LOG_LEVEL=debug
 
-# Run with verbose output
-hermes start --verbose
+# Or runtime
+export LOG_LEVEL=debug
+hermes run "test" --verbose
 ```
 
-### Get System Information
+### View Logs
 
 ```bash
-# Health check
-curl http://localhost:9001/health
+# View recent logs
+tail -f ~/.hermes/logs/hermes.log
 
-# Version info
-curl http://localhost:9001/version
-
-# Running agents
-curl http://localhost:9001/agents
-
-# System metrics
-curl http://localhost:9001/metrics
+# Check setup status
+hermes setup --status
 ```
 
 ### Collect Diagnostics
@@ -261,27 +295,27 @@ curl http://localhost:9001/metrics
 echo "=== Hermes Diagnostics ===" > diagnostics.txt
 
 echo "
---- Process List ---" >> diagnostics.txt
-ps aux | grep hermes >> diagnostics.txt
+--- Version ---" >> diagnostics.txt
+hermes --version >> diagnostics.txt 2>&1
 
 echo "
---- Docker Containers ---" >> diagnostics.txt
-docker ps >> diagnostics.txt
-
-echo "
---- Recent Logs ---" >> diagnostics.txt
-docker logs --tail 100 hermes-agent >> diagnostics.txt
+--- Setup Status ---" >> diagnostics.txt
+hermes setup --status >> diagnostics.txt 2>&1
 
 echo "
 --- Environment ---" >> diagnostics.txt
-env | grep HERMES >> diagnostics.txt
+env | grep -E "GITHUB|OLLAMA|TELEGRAM|NOTION|LOG_" >> diagnostics.txt 2>&1
+
+echo "
+--- Recent Logs ---" >> diagnostics.txt
+tail -50 ~/.hermes/logs/hermes.log 2>/dev/null >> diagnostics.txt
 
 echo "
 --- Disk Usage ---" >> diagnostics.txt
-df -h >> diagnostics.txt
+df -h . >> diagnostics.txt
 
 echo "
---- Memory Usage ---" >> diagnostics.txt
+--- Memory ---" >> diagnostics.txt
 free -h >> diagnostics.txt
 
 echo "Diagnostics saved to diagnostics.txt"
@@ -300,21 +334,19 @@ echo "Diagnostics saved to diagnostics.txt"
 ### Emergency Reset
 
 ```bash
-# Stop everything
-docker stop $(docker ps -q)
-docker rm $(docker ps -aq)
+# Reinstall from scratch
+pip uninstall hermes-agent -y
+pip install hermes-agent
 
-# Reset config
-rm -rf ~/.hermes/config/*
-rm ~/.hermes/.env
+# Reset Hermes config
+rm -rf ~/.hermes/config.yaml
 
-# Reconfigure
-cp ~/.hermes/.env.example ~/.hermes/.env
-nano ~/.hermes/.env
+# Re-run setup
+hermes setup
 
-# Restart
-hermes init
-hermes start
+# Reconfigure .env
+cp .env.example .env
+nano .env
 ```
 
 ---
@@ -323,13 +355,14 @@ hermes start
 
 | Issue | Quick Fix |
 |-------|-----------|
-| Port conflict | `sudo lsof -i :9001 && sudo kill <PID>` |
-| Model not found | `curl -X POST localhost:11434/api/pull -d '{"name":"model"}'` |
-| Auth failed | Regenerate token, update .env |
-| Out of space | `docker system prune -a` |
-| Service down | `docker-compose restart` |
-| Network error | Check firewall: `sudo ufw allow 9001/tcp` |
+| Hermes not found | `pip install hermes-agent` |
+| Model connection failed | Check `OLLAMA_API_KEY` in `.env` |
+| Git auth failed | Regenerate token, update `.env` |
+| Telegram not responding | Check `TELEGRAM_BOT_TOKEN` |
+| Profile missing | `hermes profile create "name"` |
+| Vault not initialized | `hermes vault init` |
+| Network error | Check firewall/DNS/API key |
 
 ---
 
-**Last resort:** Delete and reinstall 💀
+**Last resort:** `pip uninstall hermes-agent -y && pip install hermes-agent && hermes setup` 💀
